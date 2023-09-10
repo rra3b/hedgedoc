@@ -24,6 +24,7 @@ import { LocalAuthGuard } from '../../../identity/local/local.strategy';
 import { LoginDto } from '../../../identity/local/login.dto';
 import { RegisterDto } from '../../../identity/local/register.dto';
 import { UpdatePasswordDto } from '../../../identity/local/update-password.dto';
+import { OidcAuthGuard } from '../../../identity/oidc/oidc.strategy';
 import { SessionGuard } from '../../../identity/session.guard';
 import { ConsoleLoggerService } from '../../../logger/console-logger.service';
 import { SessionState } from '../../../sessions/session.service';
@@ -34,6 +35,7 @@ import { LoginEnabledGuard } from '../../utils/login-enabled.guard';
 import { OpenApi } from '../../utils/openapi.decorator';
 import { RegistrationEnabledGuard } from '../../utils/registration-enabled.guard';
 import { RequestUser } from '../../utils/request-user.decorator';
+
 
 type RequestWithSession = Request & {
   session: SessionState;
@@ -112,6 +114,19 @@ export class AuthController {
     request.session.username = makeUsernameLowercase(loginDto.username);
     request.session.authProvider = 'ldap';
   }
+
+  @UseGuards(OidcAuthGuard)
+  @Post('openId/:oidcIdentifier')
+  @OpenApi(201, 400, 401)
+  loginWithOpenId(
+    @Req() request: Request,
+    @Param('oidcIdentifier') openIDIdentifier: string,
+  ): void {}
+
+  @UseGuards(OidcAuthGuard)
+  @Post('oidc/:oidcIdentifier/callback')
+  @OpenApi(201, 400, 401)
+  callback(): void {}
 
   @UseGuards(SessionGuard)
   @Delete('logout')
