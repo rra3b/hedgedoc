@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2023 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
@@ -117,6 +117,13 @@ export class FrontendConfigService {
         type: AuthProviderType.SAML,
         providerName: samlEntry.providerName,
         identifier: samlEntry.identifier,
+      });
+    });
+    this.authConfig['oidc'].forEach((openidConnectEntry) => {
+      providers.push({
+        type: AuthProviderType.OPENIDCONNECT,
+        providerName: openidConnectEntry.providerName,
+        identifier: openidConnectEntry.identifier,
       });
     });
     return providers;

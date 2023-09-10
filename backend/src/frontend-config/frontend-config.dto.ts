@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: 2022 The HedgeDoc developers (see AUTHORS file)
+ * SPDX-FileCopyrightText: 2023 The HedgeDoc developers (see AUTHORS file)
  *
  * SPDX-License-Identifier: AGPL-3.0-only
  */
@@ -24,6 +24,7 @@ export enum AuthProviderType {
   LDAP = 'ldap',
   SAML = 'saml',
   OAUTH2 = 'oauth2',
+  OPENIDCONNECT = 'openid-connect',
   GITLAB = 'gitlab',
   FACEBOOK = 'facebook',
   GITHUB = 'github',
@@ -36,7 +37,8 @@ export type AuthProviderTypeWithCustomName =
   | AuthProviderType.LDAP
   | AuthProviderType.OAUTH2
   | AuthProviderType.SAML
-  | AuthProviderType.GITLAB;
+  | AuthProviderType.GITLAB
+  | AuthProviderType.OPENIDCONNECT;
 
 export type AuthProviderTypeWithoutCustomName =
   | AuthProviderType.LOCAL

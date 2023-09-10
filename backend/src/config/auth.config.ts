@@ -15,9 +15,20 @@ import {
   toArrayConfig,
 } from './utils';
 
-export interface LDAPConfig {
+export interface InternalIdentifier {
   identifier: string;
   providerName: string;
+}
+
+export interface GitlabConfig extends InternalIdentifier {
+  baseURL: string;
+  clientID: string;
+  clientSecret: string;
+  scope: GitlabScope;
+  version: GitlabVersion;
+}
+
+export interface LDAPConfig extends InternalIdentifier {
   url: string;
   bindDn?: string;
   bindCredentials?: string;
@@ -28,6 +39,45 @@ export interface LDAPConfig {
   displayNameField: string;
   profilePictureField: string;
   tlsCaCerts?: string[];
+}
+
+export interface SamlConfig extends InternalIdentifier {
+  idpSsoUrl: string;
+  idpCert: string;
+  clientCert: string;
+  issuer: string;
+  identifierFormat: string;
+  disableRequestedAuthnContext: string;
+  groupAttribute: string;
+  requiredGroups?: string[];
+  externalGroups?: string[];
+  attribute: {
+    id: string;
+    username: string;
+    email: string;
+  };
+}
+
+export interface Oauth2Config extends InternalIdentifier {
+  baseURL: string;
+  userProfileURL: string;
+  userProfileIdAttr: string;
+  userProfileUsernameAttr: string;
+  userProfileDisplayNameAttr: string;
+  userProfileEmailAttr: string;
+  tokenURL: string;
+  authorizationURL: string;
+  clientID: string;
+  clientSecret: string;
+  scope: string;
+  rolesClaim: string;
+  accessRole: string;
+}
+
+export interface OidcConfig extends InternalIdentifier {
+  issuer: string;
+  clientID: string;
+  clientSecret: string;
 }
 
 export interface AuthConfig {
@@ -62,52 +112,12 @@ export interface AuthConfig {
     clientSecret: string;
     apiKey: string;
   };
-  gitlab: {
-    identifier: string;
-    providerName: string;
-    baseURL: string;
-    clientID: string;
-    clientSecret: string;
-    scope: GitlabScope;
-    version: GitlabVersion;
-  }[];
+  gitlab: GitlabConfig[];
   // ToDo: tlsOptions exist in config.json.example. See https://nodejs.org/api/tls.html#tls_tls_connect_options_callback
   ldap: LDAPConfig[];
-  saml: {
-    identifier: string;
-    providerName: string;
-    idpSsoUrl: string;
-    idpCert: string;
-    clientCert: string;
-    issuer: string;
-    identifierFormat: string;
-    disableRequestedAuthnContext: string;
-    groupAttribute: string;
-    requiredGroups?: string[];
-    externalGroups?: string[];
-    attribute: {
-      id: string;
-      username: string;
-      email: string;
-    };
-  }[];
-  oauth2: {
-    identifier: string;
-    providerName: string;
-    baseURL: string;
-    userProfileURL: string;
-    userProfileIdAttr: string;
-    userProfileUsernameAttr: string;
-    userProfileDisplayNameAttr: string;
-    userProfileEmailAttr: string;
-    tokenURL: string;
-    authorizationURL: string;
-    clientID: string;
-    clientSecret: string;
-    scope: string;
-    rolesClaim: string;
-    accessRole: string;
-  }[];
+  saml: SamlConfig[];
+  oauth2: Oauth2Config[];
+  "oidc": OidcConfig[]
 }
 
 const authSchema = Joi.object({
@@ -246,6 +256,17 @@ const authSchema = Joi.object({
       }).optional(),
     )
     .optional(),
+  oidc: Joi.array()
+    .items(
+      Joi.object({
+        identifier: Joi.string(),
+        providerName: Joi.string().default('OpenID Connect').optional(),
+        issuer: Joi.string(),
+        clientID: Joi.string(),
+        clientSecret: Joi.string(),
+      }).optional(),
+    )
+    .optional(),
 });
 
 export default registerAs('authConfig', () => {
@@ -261,6 +282,9 @@ export default registerAs('authConfig', () => {
   );
   const oauth2Names = (
     toArrayConfig(process.env.HD_AUTH_OAUTH2S, ',') ?? []
+  ).map((name) => name.toUpperCase());
+  const oidcNames = (
+    toArrayConfig(process.env.HD_AUTH_OIDC, ',') ?? []
   ).map((name) => name.toUpperCase());
 
   const gitlabs = gitlabNames.map((gitlabName) => {
@@ -366,6 +390,16 @@ export default registerAs('authConfig', () => {
     };
   });
 
+  const oidcs = oidcNames.map((oidcName) => {
+    return {
+      identifier: oidcName,
+      providerName: process.env[`HD_AUTH_OIDC_${oidcName}_PROVIDER_NAME`],
+      issuer: process.env[`HD_AUTH_OIDC_${oidcName}_ISSUER`],
+      clientID: process.env[`HD_AUTH_OIDC_${oidcName}_CLIENT_ID`],
+      clientSecret: process.env[`HD_AUTH_OIDC_${oidcName}_CLIENT_SECRET`],
+    };
+  });
+
   const authConfig = authSchema.validate(
     {
       session: {
@@ -405,6 +439,7 @@ export default registerAs('authConfig', () => {
       ldap: ldaps,
       saml: samls,
       oauth2: oauth2s,
+      oidc: oidcs,
     },
     {
       abortEarly: false,
@@ -444,6 +479,14 @@ export default registerAs('authConfig', () => {
           'oauth2',
           'HD_AUTH_OAUTH2_',
           oauth2Names,
+        ),
+      )
+      .map((error) =>
+        replaceAuthErrorsWithEnvironmentVariables(
+          error,
+          'openid-connect',
+          'HD_AUTH_OIDC_',
+          oidcNames,
         ),
       );
     throw new Error(buildErrorMessage(errorMessages));
