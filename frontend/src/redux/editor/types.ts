@@ -13,7 +13,14 @@ export enum EditorConfigActionType {
   SET_SMART_PASTE = 'editor/preferences/setSmartPaste',
   SET_SPELL_CHECK = 'editor/preferences/setSpellCheck',
   SET_INDENT_WITH_TABS = 'editor/preferences/setIndentWithTabs',
-  SET_INDENT_SPACES = 'editor/preferences/setIndentSpaces'
+  SET_INDENT_SPACES = 'editor/preferences/setIndentSpaces',
+  SET_AUTHORSHIP_HIGHLIGHT_MODE = 'editor/preferences/setAuthorshipHighlightMode'
+}
+
+export enum AuthorshipHighlightMode {
+  NONE = 'none',
+  UNDERLINE = 'underline',
+  BACKGROUND = 'background'
 }
 
 export interface EditorConfig {
@@ -24,6 +31,7 @@ export interface EditorConfig {
   lineWrapping: boolean
   indentWithTabs: boolean
   indentSpaces: number
+  authorshipHighlightMode: AuthorshipHighlightMode
 }
 
 export type EditorConfigActions =
@@ -34,6 +42,7 @@ export type EditorConfigActions =
   | SetEditorSpellCheckAction
   | SetEditorIndentWithTabsAction
   | SetEditorIndentSpacesAction
+  | SetEditorAuthorshipHighlightModeAction
   | LoadFromLocalStorageAction
 
 export interface LoadFromLocalStorageAction extends Action<EditorConfigActionType> {
@@ -73,4 +82,9 @@ export interface SetEditorIndentWithTabsAction extends Action<EditorConfigAction
 export interface SetEditorIndentSpacesAction extends Action<EditorConfigActionType> {
   type: EditorConfigActionType.SET_INDENT_SPACES
   indentSpaces: number
+}
+
+export interface SetEditorAuthorshipHighlightModeAction extends Action<EditorConfigActionType> {
+  type: EditorConfigActionType.SET_AUTHORSHIP_HIGHLIGHT_MODE
+  authorshipHighlightMode: AuthorshipHighlightMode
 }

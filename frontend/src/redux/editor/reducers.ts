@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: AGPL-3.0-only
  */
 import type { EditorConfig, EditorConfigActions } from './types'
-import { EditorConfigActionType } from './types'
+import { AuthorshipHighlightMode, EditorConfigActionType } from './types'
 import type { Reducer } from 'redux'
 import { Logger } from '../../utils/logger'
 
@@ -17,7 +17,8 @@ export const initialState: EditorConfig = {
   spellCheck: true,
   lineWrapping: true,
   indentWithTabs: false,
-  indentSpaces: 2
+  indentSpaces: 2,
+  authorshipHighlightMode: AuthorshipHighlightMode.UNDERLINE
 }
 
 export const EditorConfigReducer: Reducer<EditorConfig, EditorConfigActions> = (
@@ -77,6 +78,13 @@ export const EditorConfigReducer: Reducer<EditorConfig, EditorConfigActions> = (
       }
       saveToLocalStorage(newState)
       return newState
+    case EditorConfigActionType.SET_AUTHORSHIP_HIGHLIGHT_MODE:
+      newState = {
+        ...state,
+        authorshipHighlightMode: action.authorshipHighlightMode
+      }
+      saveToLocalStorage(newState)
+      return newState
     default:
       return state
   }
@@ -96,7 +104,8 @@ export const loadFromLocalStorage = (): EditorConfig | undefined => {
       spellCheck: storedConfiguration?.spellCheck === true ?? true,
       lineWrapping: storedConfiguration?.lineWrapping === true ?? true,
       indentWithTabs: storedConfiguration?.indentWithTabs === true ?? false,
-      indentSpaces: storedConfiguration?.indentSpaces ?? 2
+      indentSpaces: storedConfiguration?.indentSpaces ?? 2,
+      authorshipHighlightMode: storedConfiguration?.authorshipHighlightMode ?? AuthorshipHighlightMode.UNDERLINE
     }
   } catch (_) {
     return undefined

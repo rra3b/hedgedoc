@@ -12,7 +12,9 @@ import type {
   SetEditorSyncScrollAction,
   SetEditorSpellCheckAction,
   SetEditorIndentWithTabsAction,
-  SetEditorIndentSpacesAction
+  SetEditorIndentSpacesAction,
+  SetEditorAuthorshipHighlightModeAction,
+  AuthorshipHighlightMode
 } from './types'
 import { EditorConfigActionType } from './types'
 
@@ -68,6 +70,14 @@ export const setEditorIndentSpaces = (indentSpaces: number): void => {
   const action: SetEditorIndentSpacesAction = {
     type: EditorConfigActionType.SET_INDENT_SPACES,
     indentSpaces
+  }
+  store.dispatch(action)
+}
+
+export const setEditorAuthorshipHighlightMode = (authorshipHighlightMode: AuthorshipHighlightMode): void => {
+  const action: SetEditorAuthorshipHighlightModeAction = {
+    type: EditorConfigActionType.SET_AUTHORSHIP_HIGHLIGHT_MODE,
+    authorshipHighlightMode
   }
   store.dispatch(action)
 }

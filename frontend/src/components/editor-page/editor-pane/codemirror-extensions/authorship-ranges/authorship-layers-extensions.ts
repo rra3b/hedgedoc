@@ -8,6 +8,8 @@ import { StateEffect, StateField } from '@codemirror/state'
 import type { DecorationSet } from '@codemirror/view'
 import { Decoration, EditorView } from '@codemirror/view'
 import { Logger } from '../../../../../utils/logger'
+import styles from './authorship-highlight.module.scss'
+import { createRealtimeColorCssClass } from '../realtime-colors/create-realtime-color-css-class'
 
 export interface AuthorshipUpdate {
   from: number
@@ -21,11 +23,16 @@ type MarkDecoration = {
 }
 
 const logger = new Logger('AuthorshipLayersExtensions')
+const colorSet = new Set<string>()
 
 const createMark = (from: number, to: number, userId: string): Range<Decoration> => {
   logger.debug('createMark from', from, 'to', to, 'userId', userId)
+  colorSet.add(userId)
+  // ToDo: Build something more sensible
+  const styleIndex = [...colorSet].indexOf(userId) % 7
+  const color = createRealtimeColorCssClass(styleIndex)
   return Decoration.mark({
-    class: 'authorship-highlight',
+    class: `${styles['authorship-highlight']} ${color}`,
     attributes: {
       'data-user-id': userId
     }
@@ -48,7 +55,9 @@ export const authorshipsStateField = StateField.define<DecorationSet>({
     return Decoration.none
   },
   update(authorshipDecorations: DecorationSet, transaction: Transaction) {
+    logger.debug('before map: decorationSet', authorshipDecorations, 'transaction', transaction)
     authorshipDecorations = authorshipDecorations.map(transaction.changes)
+    logger.debug('after map: decorationSet', authorshipDecorations, 'transaction', transaction)
     const effects = transaction.effects.filter((effect) => effect.is<AuthorshipUpdate>(authorshipsUpdateEffect))
     if (effects.length === 0) {
       return authorshipDecorations
@@ -60,6 +69,7 @@ export const authorshipsStateField = StateField.define<DecorationSet>({
       const effectTo = effect.value.to
       const effectIsLocal = effect.value.localUpdate
       const effectLength = effectTo - effectFrom
+      let effectHandled = false
       logger.debug(
         'eff_from',
         effectFrom,
@@ -75,6 +85,9 @@ export const authorshipsStateField = StateField.define<DecorationSet>({
       logger.debug('#decorations', authorshipDecorations.size)
       authorshipDecorations = authorshipDecorations.update({
         filter: (decorationFrom: number, decorationTo: number, value) => {
+          if (effectHandled) {
+            return true
+          }
           const decorationUserId = (value.spec as MarkDecoration).attributes?.['data-user-id'] ?? ''
           const sameUserId = decorationUserId === effectUserId && decorationUserId !== undefined
           logger.debug('dec_from', decorationFrom, 'dec_to', decorationTo, 'dec_user', decorationUserId)
@@ -83,40 +96,33 @@ export const authorshipsStateField = StateField.define<DecorationSet>({
             // The decoration is by the same user as the effect/change
 
             if (decorationFrom === effectTo || decorationTo === effectFrom) {
-              logger.debug('In own text (extending)')
+              logger.debug('before or after own text')
               // We can extend the existing decoration by adding a new one with the adjusted length
               addedDecorations.push(
                 createMark(Math.min(decorationFrom, effectFrom), Math.max(decorationTo, effectTo), decorationUserId)
               )
+              effectHandled = true
               return false
             }
-            logger.debug('before or after own text')
+
+            logger.debug('In own text (extending)')
             // the authorshipsUpdateEffect already updates the length of the decoration, so we only need to recreate it
             // otherwise we would have another second decoration wrapped around the first one
             addedDecorations.push(createMark(decorationFrom, decorationTo, decorationUserId))
+            effectHandled = true
             return false
           } else {
             // The decoration is by a different user than the effect/change
-
-            if (
-              decorationFrom === effectTo ||
-              (!effectIsLocal && decorationTo === effectFrom) ||
-              (effectIsLocal && decorationTo - effectLength === effectFrom)
-            ) {
-              // The decoration is before or after the effect/change,
-              // so we just create another decoration and keep the existing one
-              logger.debug('before or after others text')
-              addedDecorations.push(createMark(effectFrom, effectTo, effectUserId))
-              return true
-            }
-
             // Split the decoration by inserting a third decoration in the middle
-            logger.debug('In others text (splitting)')
-            addedDecorations.push(
-              createMark(decorationFrom, effectFrom, decorationUserId),
-              createMark(effectFrom, effectTo, effectUserId),
-              createMark(effectTo, decorationTo, decorationUserId)
-            )
+            logger.debug('in/before/after others text (splitting)')
+            if (decorationFrom < effectFrom) {
+              addedDecorations.push(createMark(decorationFrom, effectFrom, decorationUserId))
+            }
+            addedDecorations.push(createMark(effectFrom, effectTo, effectUserId))
+            if (effectTo < decorationTo) {
+              addedDecorations.push(createMark(effectTo, decorationTo, decorationUserId))
+            }
+            effectHandled = true
             return false
           }
         },
